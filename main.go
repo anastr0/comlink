@@ -1,74 +1,96 @@
 package main
 
 import (
+	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-var db = make(map[string]string)
+type User struct {
+	ID   int    `json:"id"`
+	Name string `json:"name" binding:"required"`
+}
+
+type Message struct {
+	ID          int       `json:"id"`
+	Content     string    `json:"content" binding:"required"`
+	Sender_ID   int       `json:"sender_id" binding:"required"`
+	Receiver_ID int       `json:"receiver_id" binding:"required"`
+	Read        bool      `json:"read"`
+	Timestamp   time.Time `json:"timestamp"`
+}
+
+var db = make(map[string]User)
+var msg_db = make(map[string]Message)
+var user_id = 1
+var msg_id = 7070
+
+func createUserHandler(c *gin.Context) {
+	// create user
+	var user_json User
+
+	if err := c.ShouldBindJSON(&user_json); err != nil {
+		log.Printf("error: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	} else {
+		user_json.ID = user_id
+		db[user_json.Name] = user_json
+		user_id = user_id + 1
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	}
+}
+
+func sendMessageHandler(c *gin.Context) {
+	// send message
+
+	// TODO : check if sender and receiver exists
+	var message_json Message
+
+	if err := c.ShouldBindJSON(&message_json); err != nil {
+		log.Printf("error: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+	if message_json.Sender_ID == message_json.Receiver_ID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "sender and receiver are same"})
+	} else {
+		message_json.ID = msg_id
+		message_json.Timestamp = time.Now()
+		msg_id = msg_id + 1
+		id := strconv.Itoa(msg_id)
+		msg_db[id] = message_json
+		c.JSON(http.StatusOK, gin.H{"status": "ok", "message": message_json})
+	}
+}
+
+func markMessageAsReadHandler(c *gin.Context) {
+	// mark message as read
+	id := c.Param("id")
+	msg := msg_db[id]
+	msg.Read = true
+	msg_db[id] = msg
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "message": msg})
+}
 
 func setupRouter() *gin.Engine {
-	// Disable Console Color
-	// gin.DisableConsoleColor()
 	r := gin.Default()
 
-	// Ping test
-	r.GET("/ping", func(c *gin.Context) {
-		c.String(http.StatusOK, "pong")
+	r.POST("/user", createUserHandler)
+	r.GET("/user", func(c *gin.Context) {
+		c.JSON(http.StatusOK, db)
 	})
 
-	// Get user value
-	r.GET("/user/:name", func(c *gin.Context) {
-		user := c.Params.ByName("name")
-		value, ok := db[user]
-		if ok {
-			c.JSON(http.StatusOK, gin.H{"user": user, "value": value})
-		} else {
-			c.JSON(http.StatusOK, gin.H{"user": user, "status": "no value"})
-		}
+	r.POST("/message", sendMessageHandler)
+	r.GET("/message", func(c *gin.Context) {
+		c.JSON(http.StatusOK, msg_db)
 	})
-
-	// Authorized group (uses gin.BasicAuth() middleware)
-	// Same than:
-	// authorized := r.Group("/")
-	// authorized.Use(gin.BasicAuth(gin.Credentials{
-	//	  "foo":  "bar",
-	//	  "manu": "123",
-	//}))
-	authorized := r.Group("/", gin.BasicAuth(gin.Accounts{
-		"foo":  "bar", // user:foo password:bar
-		"manu": "123", // user:manu password:123
-	}))
-
-	/* example curl for /admin with basicauth header
-	   Zm9vOmJhcg== is base64("foo:bar")
-
-		curl -X POST \
-	  	http://localhost:8080/admin \
-	  	-H 'authorization: Basic Zm9vOmJhcg==' \
-	  	-H 'content-type: application/json' \
-	  	-d '{"value":"bar"}'
-	*/
-	authorized.POST("admin", func(c *gin.Context) {
-		user := c.MustGet(gin.AuthUserKey).(string)
-
-		// Parse JSON
-		var json struct {
-			Value string `json:"value" binding:"required"`
-		}
-
-		if c.Bind(&json) == nil {
-			db[user] = json.Value
-			c.JSON(http.StatusOK, gin.H{"status": "ok"})
-		}
-	})
-
+	r.PATCH("/message/:id", markMessageAsReadHandler)
 	return r
 }
 
 func main() {
 	r := setupRouter()
-	// Listen and Server in 0.0.0.0:8080
 	r.Run(":8080")
 }
