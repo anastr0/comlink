@@ -1,4 +1,4 @@
-module gin
+module comlink
 
 go 1.23.5
 
