@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/IBM/sarama"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,6 +20,12 @@ func (h *MessageHandler) RetrieveConversationHandler(c *gin.Context) {
 	} else {
 		c.JSON(http.StatusOK, gin.H{"status": "ok", "messages": messages})
 	}
+}
+
+func cantorFunc(a, b int) string {
+	// https://www.cantorsparadise.com/cantor-pairing-function-e213a8a89c2b
+	cant_id := (a+b)*(a+b+1)/2 + b
+	return strconv.Itoa(cant_id)
 }
 
 func (h *MessageHandler) SendMessageHandler(c *gin.Context) {
@@ -41,14 +48,29 @@ func (h *MessageHandler) SendMessageHandler(c *gin.Context) {
 	if message_json.Sender == message_json.Receiver {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "sender and receiver are same"})
 	} else {
-		message_json.Timestamp = time.Now()
+		// result := h.db.Create(&message_json)
 
-		result := h.db.Create(&message_json)
-		if result.Error != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": result.Error})
-		} else {
-			c.JSON(http.StatusOK, gin.H{"status": "ok", "message": message_json})
+		message_json.Conversation = cantorFunc(message_json.Sender, message_json.Receiver)
+		message := &Message{
+			Content:      message_json.Content,
+			Sender:       message_json.Sender,
+			Receiver:     message_json.Receiver,
+			Read:         false,
+			Timestamp:    time.Now(),
+			Conversation: message_json.Conversation,
 		}
+
+		// We will use the conversation_id as key. This will cause
+		// all messages from the same conversation to end up
+		// on the same partition (order is preserved).
+		conversation_id := sarama.StringEncoder(message.Conversation)
+		h.producer.Input() <- &sarama.ProducerMessage{
+			Topic: "messages",
+			Key:   conversation_id,
+			Value: message,
+		}
+
+		c.JSON(http.StatusOK, gin.H{"status": "ok", "message": message_json})
 	}
 }
 

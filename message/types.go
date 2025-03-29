@@ -1,13 +1,16 @@
 package message
 
 import (
+	"encoding/json"
 	"time"
 
+	"github.com/IBM/sarama"
 	"gorm.io/gorm"
 )
 
 type MessageHandler struct {
-	db *gorm.DB
+	db       *gorm.DB
+	producer sarama.AsyncProducer
 }
 
 type User struct {
@@ -23,6 +26,25 @@ type Message struct {
 	Read         bool      `json:"read"`
 	Timestamp    time.Time `json:"timestamp"`
 	Conversation string    `json:"conversation"`
+
+	encoded []byte
+	err     error
+}
+
+func (msg *Message) ensureEncoded() {
+	if msg.encoded == nil && msg.err == nil {
+		msg.encoded, msg.err = json.Marshal(msg)
+	}
+}
+
+func (msg *Message) Length() int {
+	msg.ensureEncoded()
+	return len(msg.encoded)
+}
+
+func (msg *Message) Encode() ([]byte, error) {
+	msg.ensureEncoded()
+	return msg.encoded, msg.err
 }
 
 type Conversation struct {
