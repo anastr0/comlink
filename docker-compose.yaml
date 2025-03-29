@@ -1,14 +1,17 @@
-version: "3.9"
 services:
-  postgres:
-    image: postgres:latest
-    container_name: postgres
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: example
     ports:
       - "5432:5432"
+    environment:
+      POSTGRES_DB: msg_db
     volumes:
-      - db:/var/lib/postgresql/data
-    env_file:
-      - ./app.env
-
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
+ 
 volumes:
-  db:
+  pgdata:
