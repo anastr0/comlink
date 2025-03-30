@@ -11,6 +11,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// TODO : move all to services pkg, along with consumer
+// TODO : organise env file and vars for better usage across services, docker
+
 // Sarama configuration options
 var (
 	brokers = os.Getenv("KAFKA_PEERS")
@@ -21,12 +24,18 @@ func GetMessagesHandler() *MessageHandler {
 	// TODO : read secrets from env
 	// init required services
 	return &MessageHandler{
-		db:       getDB(),
+		db:       GetDB(),
 		producer: getMessageProducer(),
 	}
 }
 
-func getDB() *gorm.DB {
+// func (h *MessageHandler) CloseProducer() {
+// 	_ = h.producer.Close()
+// }
+
+func GetDB() *gorm.DB {
+	// TODO : read secrets from env
+	// TODO : index message table by conversation id
 	dsn := "host=localhost user=postgres password=example dbname=msg_db port=5432 sslmode=disable TimeZone=Asia/Shanghai"
 	db, err := gorm.Open(postgres.New(postgres.Config{
 		DSN:                  dsn,
@@ -48,11 +57,7 @@ func getMessageProducer() sarama.AsyncProducer {
 	}
 
 	brokers = os.Getenv("KAFKA_PEERS")
-	log.Printf("brokers: %s", os.Getenv("KAFKA_PEERS"))
 	brokerList := strings.Split(brokers, ",")
-	log.Printf("brokers: %s", brokers)
-	log.Printf("brokerList: %s", brokerList)
-	log.Printf("Kafka brokers: %s", strings.Join(brokerList, ", "))
 
 	// log.Printf("Kafka version: %s", version.String())
 	config := sarama.NewConfig()
@@ -70,13 +75,7 @@ func getMessageProducer() sarama.AsyncProducer {
 	// Note: messages will only be returned here after all retry attempts are exhausted.
 	go func() {
 		for err := range producer.Errors() {
-			log.Println("Failed to write access log entry:", err)
-		}
-	}()
-
-	defer func() {
-		if err := producer.Close(); err != nil {
-			log.Println("Failed to close server", err)
+			log.Println("Failed to write messages to kafka:", err)
 		}
 	}()
 
