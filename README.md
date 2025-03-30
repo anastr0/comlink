@@ -8,7 +8,7 @@ Real time messaging platform
 # Run in local
 
 Run postgres db and kafka
-``bash
+```bash
 docker-compose up -d
 ```
 
