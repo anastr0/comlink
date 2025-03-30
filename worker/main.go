@@ -20,7 +20,8 @@ func storeMessageInDB(db *gorm.DB, msg []byte) {
 	if err := json.Unmarshal(msg, &message_json); err != nil {
 		log.Printf("error: %v\n", err)
 	} else {
-		// write consumed message to db
+		// write consumed message to db with conversation key
+		// creates new conversation if none existent between sender and receiver
 		conv_id1 := message.GetConversationID(message_json.Sender, message_json.Receiver)
 		conv_id2 := message.GetConversationID(message_json.Receiver, message_json.Sender)
 
