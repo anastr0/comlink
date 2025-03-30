@@ -71,13 +71,7 @@ func getMessageProducer() sarama.AsyncProducer {
 	// Note: messages will only be returned here after all retry attempts are exhausted.
 	go func() {
 		for err := range producer.Errors() {
-			log.Println("Failed to write access log entry:", err)
-		}
-	}()
-
-	defer func() {
-		if err := producer.Close(); err != nil {
-			log.Println("Failed to close server", err)
+			log.Println("Failed to write messages to kafka:", err)
 		}
 	}()
 
