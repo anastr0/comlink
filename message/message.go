@@ -1,6 +1,8 @@
 package message
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"log"
 	"net/http"
 	"strconv"
@@ -24,11 +26,15 @@ func (h *MessagesAPIHandler) RetrieveConversationHandler(c *gin.Context) {
 	}
 }
 
-// func cantorFunc(a, b int) string {
-// 	// https://www.cantorsparadise.com/cantor-pairing-function-e213a8a89c2b
-// 	cant_id := (a+b)*(a+b+1)/2 + b
-// 	return strconv.Itoa(cant_id)
-// }
+func GetConversationID(sender_id, receiver_id int) string {
+	// generate md5 conversation_id from sender_id and receiver_id
+	// uses cantor pairing func https://www.cantorsparadise.com/cantor-pairing-function-e213a8a89c2b
+
+	h := md5.New()
+	cant_id := (sender_id+receiver_id)*(sender_id+receiver_id+1)/2 + receiver_id
+	h.Write([]byte(strconv.Itoa(cant_id)))
+	return hex.EncodeToString(h.Sum(nil))
+}
 
 func (h *MessagesAPIHandler) SendMessageHandler(c *gin.Context) {
 	// send message
