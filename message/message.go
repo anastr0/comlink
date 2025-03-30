@@ -2,6 +2,7 @@ package message
 
 import (
 	"crypto/sha256"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -63,13 +64,12 @@ func (h *MessageHandler) SendMessageHandler(c *gin.Context) {
 		// We will use the conversation_id as key. This will cause
 		// all messages from the same conversation to end up
 		// on the same partition (order is preserved).
-		conversation_id := sarama.StringEncoder(message.Conversation)
+		// conversation_id := sarama.StringEncoder(message.Conversation)
 		h.producer.Input() <- &sarama.ProducerMessage{
 			Topic: "messages",
-			Key:   conversation_id,
 			Value: message,
 		}
-
+		log.Printf("Message sent to Kafka: %v\n", message)
 		c.JSON(http.StatusOK, gin.H{"status": "ok", "message": message_json})
 	}
 }

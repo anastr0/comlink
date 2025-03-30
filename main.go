@@ -7,11 +7,14 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// TODO : run API with docker
+// TODO : better logging
+
 func setupRouter() *gin.Engine {
 	// create router
 	router := gin.Default()
 
-	// get message handler - gives db access to routes
+	// get message handler - adds db access and message queue producer to handler
 	comlink := message.GetMessagesHandler()
 
 	// user routes
@@ -25,6 +28,8 @@ func setupRouter() *gin.Engine {
 		router.GET("/message", comlink.RetrieveConversationHandler)
 		router.PATCH("/message/:id", comlink.MarkMessageAsReadHandler)
 	}
+
+	// TODO : close producer gracefully
 	return router
 }
 

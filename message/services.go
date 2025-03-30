@@ -29,6 +29,10 @@ func GetMessagesHandler() *MessageHandler {
 	}
 }
 
+// func (h *MessageHandler) CloseProducer() {
+// 	_ = h.producer.Close()
+// }
+
 func GetDB() *gorm.DB {
 	// TODO : read secrets from env
 	// TODO : index message table by conversation id
