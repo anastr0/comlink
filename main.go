@@ -39,7 +39,6 @@ func main() {
 	if err != nil {
 		panic(err.Error())
 	}
-
 	// setup router
 	r := setupRouter()
 	r.Run(":8080")
