@@ -13,11 +13,28 @@ import (
 )
 
 func (h *MessagesAPIHandler) RetrieveConversationHandler(c *gin.Context) {
-	// get all messages
-	// TODO : sender and receiver are query params
-	// TODO : get latest 10 messages, paginated
+	// get conversation history
+
+	// TODO : pagination
+	if c.Query("user1") == "" || c.Query("user2") == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user1 and user2 are required"})
+		return
+	}
+	user1, err1 := strconv.Atoi(c.Query("user1"))
+	user2, err2 := strconv.Atoi(c.Query("user2"))
+
+	if err1 != nil || err2 != nil {
+		log.Printf("errors: %v %v\n", err1, err2)
+	}
+
+	// get conversation ids, query by conversation ids
+	conv_key1 := GetConversationID(user1, user2)
+	conv_key2 := GetConversationID(user2, user1)
+
 	var messages []Message
-	result := h.db.Find(&messages)
+	result := h.db.Limit(10).Where(
+		"conversation = ? OR conversation = ?", conv_key1, conv_key2,
+	).Order("id	desc").Find(&messages)
 
 	if result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error})
