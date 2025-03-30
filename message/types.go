@@ -50,6 +50,6 @@ func (msg *Message) Encode() ([]byte, error) {
 type Conversation struct {
 	ID    uint   `json:"id"`
 	Key   string // hash_func ( user1_id, user2_id )
-	User1 uint   `json:"user1"`
-	User2 uint   `json:"user2"`
+	User1 int    `json:"user1"`
+	User2 int    `json:"user2"`
 }
