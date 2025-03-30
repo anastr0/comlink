@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS messages (
   receiver bigserial references users(id),
   read boolean DEFAULT false,
   timestamp timestamp NOT NULL,
-  conversation varchar(64)
+  conversation varchar(32) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS conversations (
@@ -19,3 +19,6 @@ CREATE TABLE IF NOT EXISTS conversations (
   user1 bigserial references users(id),
   user2 bigserial references users(id)
 )
+
+CREATE INDEX conv_index ON messages(conversation);
+
