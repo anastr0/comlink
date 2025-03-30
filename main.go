@@ -26,7 +26,7 @@ func setupRouter() *gin.Engine {
 	{
 		router.POST("/message", comlink.SendMessageHandler)
 		router.GET("/message", comlink.RetrieveConversationHandler)
-		router.PATCH("/message/:id", comlink.MarkMessageAsReadHandler)
+		router.PATCH("/message/:id/read", comlink.MarkMessageAsReadHandler)
 	}
 
 	// TODO : close producer gracefully

@@ -39,7 +39,7 @@ func (h *MessagesAPIHandler) RetrieveConversationHandler(c *gin.Context) {
 	if result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error})
 	} else {
-		c.JSON(http.StatusOK, gin.H{"status": "ok", "messages": messages})
+		c.JSON(http.StatusOK, gin.H{"messages": messages})
 	}
 }
 
@@ -86,7 +86,7 @@ func (h *MessagesAPIHandler) SendMessageHandler(c *gin.Context) {
 			Value: message,
 		}
 		log.Printf("Message sent to Kafka: %v\n", message)
-		c.JSON(http.StatusOK, gin.H{"status": "sent", "message": message_json})
+		c.JSON(http.StatusCreated, gin.H{"status": "message sent"})
 	}
 }
 
@@ -100,12 +100,21 @@ func (h *MessagesAPIHandler) MarkMessageAsReadHandler(c *gin.Context) {
 		return
 	}
 
-	message := Message{ID: uint(msg_id)}
-	result := h.db.Model(&message).Update("read", true)
+	var message Message
 
-	if result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error})
+	// check if message exists, return error if not
+	h.db.Where("id = ?", msg_id).Limit(1).Find(&message)
+
+	if message.ID == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
 	} else {
-		c.JSON(http.StatusOK, gin.H{"status": "ok", "message": message})
+		// message_id exists, mark message as read
+		result := h.db.Model(&message).Update("read", true)
+
+		if result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error})
+		} else {
+			c.JSON(http.StatusNoContent, gin.H{"status": "read"})
+		}
 	}
 }
