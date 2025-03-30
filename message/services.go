@@ -11,6 +11,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// TODO : move all to services pkg, along with consumer
+// TODO : organise env file and vars for better usage across services, docker
+
 // Sarama configuration options
 var (
 	brokers = os.Getenv("KAFKA_PEERS")
@@ -21,12 +24,14 @@ func GetMessagesHandler() *MessageHandler {
 	// TODO : read secrets from env
 	// init required services
 	return &MessageHandler{
-		db:       getDB(),
+		db:       GetDB(),
 		producer: getMessageProducer(),
 	}
 }
 
-func getDB() *gorm.DB {
+func GetDB() *gorm.DB {
+	// TODO : read secrets from env
+	// TODO : index message table by conversation id
 	dsn := "host=localhost user=postgres password=example dbname=msg_db port=5432 sslmode=disable TimeZone=Asia/Shanghai"
 	db, err := gorm.Open(postgres.New(postgres.Config{
 		DSN:                  dsn,
