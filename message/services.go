@@ -48,11 +48,7 @@ func getMessageProducer() sarama.AsyncProducer {
 	}
 
 	brokers = os.Getenv("KAFKA_PEERS")
-	log.Printf("brokers: %s", os.Getenv("KAFKA_PEERS"))
 	brokerList := strings.Split(brokers, ",")
-	log.Printf("brokers: %s", brokers)
-	log.Printf("brokerList: %s", brokerList)
-	log.Printf("Kafka brokers: %s", strings.Join(brokerList, ", "))
 
 	// log.Printf("Kafka version: %s", version.String())
 	config := sarama.NewConfig()
