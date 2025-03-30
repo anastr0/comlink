@@ -20,10 +20,9 @@ var (
 	version = sarama.DefaultVersion.String()
 )
 
-func GetMessagesHandler() *MessageHandler {
-	// TODO : read secrets from env
-	// init required services
-	return &MessageHandler{
+func GetMessagesAPIHandler() *MessagesAPIHandler {
+	// init required services for message API handler
+	return &MessagesAPIHandler{
 		db:       GetDB(),
 		producer: getMessageProducer(),
 	}

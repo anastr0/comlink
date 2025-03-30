@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *MessageHandler) RetrieveConversationHandler(c *gin.Context) {
+func (h *MessagesAPIHandler) RetrieveConversationHandler(c *gin.Context) {
 	// get all messages
 	// TODO : sender and receiver are query params
 	// TODO : get latest 10 messages, paginated
@@ -30,7 +30,7 @@ func (h *MessageHandler) RetrieveConversationHandler(c *gin.Context) {
 // 	return strconv.Itoa(cant_id)
 // }
 
-func (h *MessageHandler) SendMessageHandler(c *gin.Context) {
+func (h *MessagesAPIHandler) SendMessageHandler(c *gin.Context) {
 	// send message
 
 	// TODO skip: check if sender and receiver exists
@@ -67,7 +67,7 @@ func (h *MessageHandler) SendMessageHandler(c *gin.Context) {
 	}
 }
 
-func (h *MessageHandler) MarkMessageAsReadHandler(c *gin.Context) {
+func (h *MessagesAPIHandler) MarkMessageAsReadHandler(c *gin.Context) {
 	// mark message as read
 	id := c.Param("id")
 	msg_id, err := strconv.ParseUint(id, 10, 32)

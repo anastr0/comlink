@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type MessageHandler struct {
+type MessagesAPIHandler struct {
 	db       *gorm.DB
 	producer sarama.AsyncProducer
 }

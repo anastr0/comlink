@@ -14,8 +14,8 @@ func setupRouter() *gin.Engine {
 	// create router
 	router := gin.Default()
 
-	// get message handler - adds db access and message queue producer to handler
-	comlink := message.GetMessagesHandler()
+	// get message API handler - adds db access and message queue producer to handler
+	comlink := message.GetMessagesAPIHandler()
 
 	// user routes
 	{

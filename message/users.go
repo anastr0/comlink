@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *MessageHandler) CreateUserHandler(c *gin.Context) {
+func (h *MessagesAPIHandler) CreateUserHandler(c *gin.Context) {
 	// create user
 	var user_json User
 
@@ -24,7 +24,7 @@ func (h *MessageHandler) CreateUserHandler(c *gin.Context) {
 		}
 	}
 }
-func (h *MessageHandler) GetUsersHandler(c *gin.Context) {
+func (h *MessagesAPIHandler) GetUsersHandler(c *gin.Context) {
 	// get all users
 	var users []User
 	result := h.db.Find(&users)
