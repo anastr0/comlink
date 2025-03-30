@@ -1,4 +1,7 @@
-CREATE TABLE IF NOT EXISTS users (id bigserial primary key,name varchar(64) NOT NULL);
+CREATE TABLE IF NOT EXISTS users (
+  id bigserial primary key,
+  name varchar(64) NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS messages (
   id bigserial primary key,
@@ -7,10 +10,12 @@ CREATE TABLE IF NOT EXISTS messages (
   receiver bigserial references users(id),
   read boolean DEFAULT false,
   timestamp timestamp NOT NULL,
-  conversation varchar(64),
+  conversation varchar(64)
 );
 
 CREATE TABLE IF NOT EXISTS conversations (
   id bigserial,
   key varchar(64) primary key,
+  user1 bigserial references users(id),
+  user2 bigserial references users(id)
 )
