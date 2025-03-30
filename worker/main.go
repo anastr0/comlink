@@ -6,75 +6,87 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 
-	"github.com/IBM/sarama"
+	"github.com/joho/godotenv"
+	"gorm.io/gorm"
 )
 
-// TODO : run worker in docker
-// TODO : pass brokers, topic as flags
+// TODO misc : run worker in docker
+// TODO skip : pass brokers, topic as flags
 
-// Sarama configuration options
-var (
-	brokers = "localhost:9092,"
-	topic   = "messages"
-)
+func storeMessageInDB(db *gorm.DB, msg []byte) {
+	// TODO : store message in db
+	var message_json message.Message
+	if err := json.Unmarshal(msg, &message_json); err != nil {
+		log.Printf("error: %v\n", err)
+	} else {
+		// write consumed message to db
+		conv_id1 := message.GetConversationID(message_json.Sender, message_json.Receiver)
+		conv_id2 := message.GetConversationID(message_json.Receiver, message_json.Sender)
+
+		var conv message.Conversation
+		conv_result := db.Limit(1).Find(&conv, "key = ? OR key = ?", conv_id1, conv_id2)
+		if conv_result.Error != nil {
+			log.Printf("error: %v\n", conv_result.Error)
+		}
+
+		if conv.ID == 0 {
+			// create conversation
+			log.Printf("conversation not found, creating conversation: %v\n", conv)
+			conv = message.Conversation{
+				User1: message_json.Sender,
+				User2: message_json.Receiver,
+				Key:   conv_id1,
+			}
+			conv_result = db.Create(&conv)
+			if conv_result.Error != nil {
+				log.Printf("error: %v\n", conv_result.Error)
+			}
+		} else {
+			// conversation found
+			log.Printf("conversation found: %v\n", conv)
+		}
+
+		message_json.Conversation = conv.Key
+		// get possible conversation ids
+		result := db.Create(&message_json)
+		if result.Error != nil {
+			log.Printf("error: %v\n", result.Error)
+		} else {
+			log.Printf("message created successfully\n")
+		}
+	}
+}
 
 func worker() {
 	keepRunning := true
 
-	// get db
+	// get db and consumer
 	db := message.GetDB()
-
-	config := sarama.NewConfig()
-	brokerList := strings.Split(brokers, ",")
-
-	consumer, err := sarama.NewConsumer(brokerList, config)
-	if err != nil {
-		panic(err)
-	}
-	log.Println("consumer created successfully")
-
-	partitionConsumer, err := consumer.ConsumePartition(topic, 0, sarama.OffsetOldest)
-	if err != nil {
-		log.Printf("Consumer initialization error: %v", err)
-	}
+	consumer := message.GetPartitionConsumer()
 
 	// Run infinite loop : keep consuming, until a kill signal is received
+	// TODO skip : keep track of consumed messages, (exactly once)
 
 	// Trap SIGINT to trigger a shutdown.
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
-	// Consume messages. write messages to db
 	consumed := 0
 	for keepRunning {
 		select {
-		case msg := <-partitionConsumer.Messages():
+		case msg := <-consumer.Messages():
 			log.Printf("Message claimed: topic=%q partition=%d offset=%d key=%q value=%q consumer=%v\n",
 				msg.Topic, msg.Partition, msg.Offset, string(msg.Key), string(msg.Value), consumed)
-
-			var message_json message.Message
-
-			if err := json.Unmarshal(msg.Value, &message_json); err != nil {
-				log.Printf("error: %v\n", err)
-			} else {
-				// write consumed message to db
-				// TODO : clear or offset message after consumption
-				// TODO : create conversation id if not exists
-				result := db.Create(&message_json)
-				if result.Error != nil {
-					log.Printf("error: %v\n", result.Error)
-				} else {
-					log.Printf("message created successfully\n")
-				}
-			}
+			// Consume messages. write messages to db
+			storeMessageInDB(db, msg.Value)
 			consumed++
-		case err := <-partitionConsumer.Errors():
+		case err := <-consumer.Errors():
 			log.Printf("Error from consumer: %v\n", err)
 		case s := <-signals:
+			// Graceful shutdown
 			log.Printf("Signal received: %s, shutting down...\n", s)
-			if err := partitionConsumer.Close(); err != nil {
+			if err := consumer.Close(); err != nil {
 				log.Fatalln(err)
 			}
 			keepRunning = false
@@ -84,6 +96,11 @@ func worker() {
 }
 
 func main() {
+	err := godotenv.Load("../.env")
+	if err != nil {
+		panic(err.Error())
+	}
+
 	// start worker service
 	worker()
 }

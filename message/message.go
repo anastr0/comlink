@@ -1,7 +1,8 @@
 package message
 
 import (
-	"crypto/sha256"
+	"crypto/md5"
+	"encoding/hex"
 	"log"
 	"net/http"
 	"strconv"
@@ -11,8 +12,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *MessageHandler) RetrieveConversationHandler(c *gin.Context) {
+func (h *MessagesAPIHandler) RetrieveConversationHandler(c *gin.Context) {
 	// get all messages
+	// TODO : sender and receiver are query params
+	// TODO : get latest 10 messages, paginated
 	var messages []Message
 	result := h.db.Find(&messages)
 
@@ -23,22 +26,20 @@ func (h *MessageHandler) RetrieveConversationHandler(c *gin.Context) {
 	}
 }
 
-func cantorFunc(a, b int) string {
-	// https://www.cantorsparadise.com/cantor-pairing-function-e213a8a89c2b
-	cant_id := (a+b)*(a+b+1)/2 + b
-	return strconv.Itoa(cant_id)
+func GetConversationID(sender_id, receiver_id int) string {
+	// generate md5 conversation_id from sender_id and receiver_id
+	// uses cantor pairing func https://www.cantorsparadise.com/cantor-pairing-function-e213a8a89c2b
+
+	h := md5.New()
+	cant_id := (sender_id+receiver_id)*(sender_id+receiver_id+1)/2 + receiver_id
+	h.Write([]byte(strconv.Itoa(cant_id)))
+	return hex.EncodeToString(h.Sum(nil))
 }
 
-func (h *MessageHandler) SendMessageHandler(c *gin.Context) {
+func (h *MessagesAPIHandler) SendMessageHandler(c *gin.Context) {
 	// send message
 
-	// TODO : check if sender and receiver exists
-	// TODO : sender and receiver are query params
-	// TODO : create conversation id, move to worker
-	input1 := strconv.Itoa(1) + strconv.Itoa(2)
-	first := sha256.New()
-	first.Write([]byte(input1))
-
+	// TODO skip: check if sender and receiver exists
 	var message_json Message
 
 	if err := c.ShouldBindJSON(&message_json); err != nil {
@@ -49,32 +50,30 @@ func (h *MessageHandler) SendMessageHandler(c *gin.Context) {
 	if message_json.Sender == message_json.Receiver {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "sender and receiver are same"})
 	} else {
-		// result := h.db.Create(&message_json)
-
-		message_json.Conversation = cantorFunc(message_json.Sender, message_json.Receiver)
+		// producer : push message to kafka
 		message := &Message{
-			Content:      message_json.Content,
-			Sender:       message_json.Sender,
-			Receiver:     message_json.Receiver,
-			Read:         false,
-			Timestamp:    time.Now(),
-			Conversation: message_json.Conversation,
+			Content:   message_json.Content,
+			Sender:    message_json.Sender,
+			Receiver:  message_json.Receiver,
+			Read:      false,
+			Timestamp: time.Now(),
 		}
 
-		// We will use the conversation_id as key. This will cause
+		// TODO skip : We will use the conversation_id as key. This will cause
 		// all messages from the same conversation to end up
 		// on the same partition (order is preserved).
 		// conversation_id := sarama.StringEncoder(message.Conversation)
+		// Key: conversation_id
 		h.producer.Input() <- &sarama.ProducerMessage{
 			Topic: "messages",
 			Value: message,
 		}
 		log.Printf("Message sent to Kafka: %v\n", message)
-		c.JSON(http.StatusOK, gin.H{"status": "ok", "message": message_json})
+		c.JSON(http.StatusOK, gin.H{"status": "sent", "message": message_json})
 	}
 }
 
-func (h *MessageHandler) MarkMessageAsReadHandler(c *gin.Context) {
+func (h *MessagesAPIHandler) MarkMessageAsReadHandler(c *gin.Context) {
 	// mark message as read
 	id := c.Param("id")
 	msg_id, err := strconv.ParseUint(id, 10, 32)
