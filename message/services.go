@@ -16,8 +16,9 @@ import (
 
 // Sarama configuration options
 var (
-	brokers = os.Getenv("KAFKA_PEERS")
-	version = sarama.DefaultVersion.String()
+	brokerList = strings.Split(os.Getenv("KAFKA_PEERS"), ",")
+	version    = sarama.DefaultVersion.String()
+	topic      = os.Getenv("KAFKA_TOPIC")
 )
 
 func GetMessagesAPIHandler() *MessagesAPIHandler {
@@ -55,10 +56,6 @@ func getMessageProducer() sarama.AsyncProducer {
 		log.Panicf("Error parsing Kafka version: %v", err)
 	}
 
-	brokers = os.Getenv("KAFKA_PEERS")
-	brokerList := strings.Split(brokers, ",")
-
-	// log.Printf("Kafka version: %s", version.String())
 	config := sarama.NewConfig()
 	config.Version = version
 	config.Producer.RequiredAcks = sarama.WaitForLocal       // Only wait for the leader to ack
@@ -79,4 +76,19 @@ func getMessageProducer() sarama.AsyncProducer {
 	}()
 
 	return producer
+}
+
+func GetPartitionConsumer() sarama.PartitionConsumer {
+	config := sarama.NewConfig()
+	consumer, err := sarama.NewConsumer(brokerList, config)
+	if err != nil {
+		panic(err)
+	}
+	log.Println("consumer created successfully")
+
+	partitionConsumer, err := consumer.ConsumePartition(topic, 0, sarama.OffsetOldest)
+	if err != nil {
+		log.Printf("Consumer initialization error: %v", err)
+	}
+	return partitionConsumer
 }
