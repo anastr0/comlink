@@ -123,7 +123,7 @@ func (h *MessagesAPIHandler) MarkMessageAsReadHandler(c *gin.Context) {
 		if result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error})
 		} else {
-			c.JSON(http.StatusNoContent, gin.H{"status": "read"})
+			c.JSON(http.StatusOK, gin.H{"status": "read"})
 		}
 	}
 }
