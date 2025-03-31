@@ -15,8 +15,10 @@ import (
 func (h *MessagesAPIHandler) RetrieveConversationHandler(c *gin.Context) {
 	// get conversation history
 
-	// TODO : pagination
+	// validate if user1 and user2 are given
+	log.Printf("user1: %v, user2: %v\n", c.Query("user1"), c.Query("user2"))
 	if c.Query("user1") == "" || c.Query("user2") == "" {
+		log.Printf("Error:user1 and user2 are required\n")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "user1 and user2 are required"})
 		return
 	}
@@ -24,22 +26,31 @@ func (h *MessagesAPIHandler) RetrieveConversationHandler(c *gin.Context) {
 	user2, err2 := strconv.Atoi(c.Query("user2"))
 
 	if err1 != nil || err2 != nil {
-		log.Printf("errors: %v %v\n", err1, err2)
-	}
-
-	// get conversation ids, query by conversation ids
-	conv_key1 := GetConversationID(user1, user2)
-	conv_key2 := GetConversationID(user2, user1)
-
-	var messages []Message
-	result := h.db.Limit(10).Where(
-		"conversation = ? OR conversation = ?", conv_key1, conv_key2,
-	).Order("id	desc").Find(&messages)
-
-	if result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error})
+		log.Printf("Error: %v %v\n", err1, err2)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user1 and user2 should be of type int"})
 	} else {
-		c.JSON(http.StatusOK, gin.H{"messages": messages})
+		// get a pair of conversation_ids to fetch conversation for user1 and user2
+		// only one conversation will exist for user1 and user2,
+		// with conversation_id generated for either user1+user2 order or user2,user1 order
+		// the query will try to fetch with both conversation_id, but only one convid will exist in db
+		//	the messages are indexed by conversation id in db
+		conv_key1 := GetConversationID(user1, user2)
+		conv_key2 := GetConversationID(user2, user1)
+
+		var messages []Message
+		result := h.db.Limit(10).Where(
+			"conversation = ? OR conversation = ?", conv_key1, conv_key2,
+		).Order("id	desc").Find(&messages)
+
+		if result.Error != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": result.Error})
+		} else {
+			if len(messages) == 0 {
+				c.JSON(http.StatusNotFound, gin.H{"error": "conversation not found"})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"messages": messages})
+		}
 	}
 }
 
@@ -55,8 +66,6 @@ func GetConversationID(sender_id, receiver_id int) string {
 
 func (h *MessagesAPIHandler) SendMessageHandler(c *gin.Context) {
 	// send message
-
-	// TODO skip: check if sender and receiver exists
 	var message_json Message
 
 	if err := c.ShouldBindJSON(&message_json); err != nil {

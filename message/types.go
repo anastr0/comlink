@@ -31,6 +31,7 @@ type Message struct {
 	err     error
 }
 
+// ensure message is encoded for communication with kafka
 func (msg *Message) ensureEncoded() {
 	if msg.encoded == nil && msg.err == nil {
 		msg.encoded, msg.err = json.Marshal(msg)
@@ -50,6 +51,6 @@ func (msg *Message) Encode() ([]byte, error) {
 type Conversation struct {
 	ID    uint   `json:"id"`
 	Key   string // hash_func ( user1_id, user2_id )
-	User1 int    `json:"user1"`
-	User2 int    `json:"user2"`
+	User1 int    `json:"user1" binding:"required"`
+	User2 int    `json:"user2" binding:"required"`
 }

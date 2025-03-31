@@ -11,29 +11,31 @@ import (
 	"gorm.io/gorm"
 )
 
-// TODO misc : run worker in docker
-// TODO skip : pass brokers, topic as flags
-
 func storeMessageInDB(db *gorm.DB, msg []byte) {
-	// TODO : store message in db
 	var message_json message.Message
 	if err := json.Unmarshal(msg, &message_json); err != nil {
 		log.Printf("error: %v\n", err)
 	} else {
 		// write consumed message to db with conversation key
 		// creates new conversation if none existent between sender and receiver
+
+		// get pair of possible conversation_ids for sender and receiver
 		conv_id1 := message.GetConversationID(message_json.Sender, message_json.Receiver)
 		conv_id2 := message.GetConversationID(message_json.Receiver, message_json.Sender)
 
 		var conv message.Conversation
+
+		// check if a conversation exists in db between sender and receiver
+		// if found, use existing conversation key
+		// else, create new conversation with one of the generated conversation_ids
 		conv_result := db.Limit(1).Find(&conv, "key = ? OR key = ?", conv_id1, conv_id2)
 		if conv_result.Error != nil {
-			log.Printf("error: %v\n", conv_result.Error)
+			log.Printf("Error fetching conversation: %v\n", conv_result.Error)
 		}
 
 		if conv.ID == 0 {
 			// create conversation
-			log.Printf("conversation not found, creating conversation: %v\n", conv)
+			log.Printf("Conversation not found, creating conversation: %v\n", conv)
 			conv = message.Conversation{
 				User1: message_json.Sender,
 				User2: message_json.Receiver,
@@ -41,20 +43,20 @@ func storeMessageInDB(db *gorm.DB, msg []byte) {
 			}
 			conv_result = db.Create(&conv)
 			if conv_result.Error != nil {
-				log.Printf("error: %v\n", conv_result.Error)
+				log.Printf("Error creating conversation: %v\n", conv_result.Error)
 			}
 		} else {
 			// conversation found
-			log.Printf("conversation found: %v\n", conv)
+			log.Printf("Conversation found: %v\n", conv)
 		}
 
 		message_json.Conversation = conv.Key
 		// get possible conversation ids
 		result := db.Create(&message_json)
 		if result.Error != nil {
-			log.Printf("error: %v\n", result.Error)
+			log.Printf("Error creating message: %v\n", result.Error)
 		} else {
-			log.Printf("message created successfully\n")
+			log.Printf("Message written in db successfuly.\n")
 		}
 	}
 }
