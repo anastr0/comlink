@@ -24,6 +24,7 @@ func (h *MessagesAPIHandler) CreateUserHandler(c *gin.Context) {
 		}
 	}
 }
+
 func (h *MessagesAPIHandler) GetUsersHandler(c *gin.Context) {
 	// get all users
 	var users []User

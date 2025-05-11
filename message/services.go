@@ -25,6 +25,7 @@ func GetMessagesAPIHandler() *MessagesAPIHandler {
 // }
 
 func GetDB() *gorm.DB {
+	// TODO : better usage of env variables
 	postgres_host := os.Getenv("POSTGRES_HOST")
 	postgres_port := os.Getenv("POSTGRES_PORT")
 	postgres_user := os.Getenv("POSTGRES_USER")

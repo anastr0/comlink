@@ -14,7 +14,7 @@ import (
 
 func (h *MessagesAPIHandler) RetrieveConversationHandler(c *gin.Context) {
 	// get conversation history
-
+	// TODO : better validation by binding to type
 	// validate if user1 and user2 are given
 	log.Printf("user1: %v, user2: %v\n", c.Query("user1"), c.Query("user2"))
 	if c.Query("user1") == "" || c.Query("user2") == "" {
@@ -120,7 +120,7 @@ func (h *MessagesAPIHandler) MarkMessageAsReadHandler(c *gin.Context) {
 	}
 
 	var message Message
-
+	// TODO : check message exists and mark read if exists in one update query
 	// check if message exists, return error if not
 	h.db.Where("id = ?", msg_id).Limit(1).Find(&message)
 

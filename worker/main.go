@@ -48,6 +48,7 @@ func worker() {
 			log.Printf("Message claimed: topic=%q partition=%d offset=%d key=%q value=%q consumer=%v\n",
 				msg.Topic, msg.Partition, msg.Offset, string(msg.Key), string(msg.Value), consumed)
 			// Consume messages. write messages to db
+			// TODO : consume messages exactly once
 			storeMessageInDB(db, msg.Value)
 			consumed++
 		case err := <-consumer.Errors():
