@@ -56,3 +56,11 @@ mark message read
 ```bash
 curl -s -X PATCH http://localhost:8080/message/:id/read | jq
 ```
+
+# phase 2 roadmap
+
+1. Add client - react
+2. QR code - 1 to 1 conversations
+3. websocket chat in client
+4. encryption
+5. docker - run api and worker process
