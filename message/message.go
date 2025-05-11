@@ -57,9 +57,15 @@ func (h *MessagesAPIHandler) RetrieveConversationHandler(c *gin.Context) {
 func GetConversationID(sender_id, receiver_id int) string {
 	// generate md5 conversation_id from sender_id and receiver_id
 	// uses cantor pairing func https://www.cantorsparadise.com/cantor-pairing-function-e213a8a89c2b
+	// sort ids and use only one conversation id
+	if sender_id > receiver_id {
+		sender_id, receiver_id = receiver_id, sender_id
+	}
+	a := sender_id
+	b := receiver_id
 
 	h := md5.New()
-	cant_id := (sender_id+receiver_id)*(sender_id+receiver_id+1)/2 + receiver_id
+	cant_id := (a+b)*(a+b+1)/2 + b
 	h.Write([]byte(strconv.Itoa(cant_id)))
 	return hex.EncodeToString(h.Sum(nil))
 }
@@ -83,6 +89,10 @@ func (h *MessagesAPIHandler) SendMessageHandler(c *gin.Context) {
 			Receiver:  message_json.Receiver,
 			Read:      false,
 			Timestamp: time.Now(),
+			Conversation: GetConversationID(
+				message_json.Sender,
+				message_json.Receiver,
+			),
 		}
 
 		// TODO skip : We will use the conversation_id as key. This will cause
